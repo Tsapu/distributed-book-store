@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+package bookstore;
+
+service Bookstore {
+  rpc ListBooks (ListBooksRequest) returns (ListBooksResponse) {}
+  rpc GetBook (GetBookRequest) returns (Book) {}
+  rpc AddBook (Book) returns (AddBookResponse) {}
+  rpc DeleteBook (DeleteBookRequest) returns (DeleteBookResponse) {}
+  // rpc CheckHealth(HealthCheckRequest) returns (HealthCheckResponse) {}
+}
+
+service Health {
+  rpc Check(HealthCheckRequest) returns (HealthCheckResponse) {}
+}
+
+message HealthCheckRequest {
+}
+
+message HealthCheckResponse {
+  bool healthy = 1;
+}
+
+message ListBooksRequest {
+}
+
+message ListBooksResponse {
+  repeated Book books = 1;
+}
+
+message GetBookRequest {
+  string id = 1;
+}
+
+message AddBookResponse {
+  string id = 1;
+}
+
+message DeleteBookRequest {
+  string id = 1;
+}
+
+message DeleteBookResponse {
+}
+
+message Book {
+  string id = 1;
+  string title = 2;
+  float price = 4;
+}
