@@ -35,14 +35,23 @@ then fill in the secret in the config.json file, where you also need to specify 
 consul agent --server --config-file consul_conf.json
 python3 main.py
 ```
-3. To join other nodes:
+3. Fill the config.ini with your ip addresses
+4. To join other nodes:
 ```
-consul agent --retry-join=<master-node-ip> --bind=0.0.0.0 --advertise=<node-ip> --datacenter="bookstore-data-center" --encrypt=aPLfonbTEhvMnu1XYPBq3puInLPfic0ilO4mnqmT4I8= --data-dir=/var/consul
+consul agent --retry-join=<master-node-ip> --bind=0.0.0.0 --advertise=<node-ip> --datacenter="bookstore-data-center" --encrypt=<your_key> --data-dir=/var/consul --disable-host-node-id
 python3 main.py
 ```
 
 ```
-consul agent --retry-join=172.20.10.4 --bind=0.0.0.0 --advertise=192.168.56.10 --datacenter="bookstore-data-center" --encrypt=aPLfonbTEhvMnu1XYPBq3puInLPfic0ilO4mnqmT4I8= --data-dir=/var/consul
+consul agent \
+ --retry-join=172.20.10.4 \
+ --bind=0.0.0.0 \
+ --advertise=192.168.56.10 \
+ --datacenter="bookstore-data-center" \
+ --encrypt=<your_key> \
+ --data-dir=/var/consul \
+ --disable-host-node-id
+
 python3 main.py
 ```
 
