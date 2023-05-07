@@ -33,24 +33,24 @@ class Pnode:
             port=self.port,
             check=consul.Check.tcp(self.host, self.port, interval="10s", timeout="1s")
         )
-        return true
+        return True
         
-    def register_process(self):
-        # for i in range(x):
-        # Register the gRPC service with Consul
-        # service_name = f"{self.node_id}-PS{i+1}"
-        service_port = generate_valid_proccess_port()
-        self.cl.agent.service.register(
-            name=service_name,
-            service_id=service_name,
-            address=self.host,
-            port=service_port,
-            check=consul.Check.tcp(self.host, service_port, interval="10s", timeout="1s")
-        )
+    # def register_process(self):
+    #     # for i in range(x):
+    #     # Register the gRPC service with Consul
+    #     # service_name = f"{self.node_id}-PS{i+1}"
+    #     service_port = generate_valid_proccess_port()
+    #     self.cl.agent.service.register(
+    #         name=service_name,
+    #         service_id=service_name,
+    #         address=self.host,
+    #         port=service_port,
+    #         check=consul.Check.tcp(self.host, service_port, interval="10s", timeout="1s")
+    #     )
 
         # Start the gRPC process server
-        process_thread = threading.Thread(target=self._start_server)
-        process_thread.start()
+        # process_thread = threading.Thread(target=self._start_server)
+        # process_thread.start()
         # self._start_server()
 
     def start(self):
@@ -64,7 +64,7 @@ class Pnode:
         add_HealthServicer_to_server(HealthServicer(), server)
         server.add_insecure_port(f'[::]:{self.port}')
         server.start()
-        print(f"Node {self.id} listening on port {self.port}...")
+        print(f"Node-{self.id} listening on port {self.port}...")
         self.server = server # ref for stop
         self.server.wait_for_termination()
 
