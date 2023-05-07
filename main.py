@@ -21,7 +21,7 @@ class InteractiveNode:
             host=master,
             dc="bookstore-data-center",
         )
-        self.node_id = self.get_nr_of_pnodes() + 1
+        self.node_id = self.get_nr_of_nodes() + 1
         self.ip = node_ip
         # node_port = generate_valid_node_port()
         # self.node = Pnode(
@@ -66,6 +66,9 @@ class InteractiveNode:
     
     def get_nr_of_pnodes(self):
         return len(self.get_all_pnodes())
+    
+    def get_nr_of_nodes(self):
+        return len(self.consul_client.catalog.nodes())
 
     def start_all_pnodes(self):
         for pnode in self.pnodes:
