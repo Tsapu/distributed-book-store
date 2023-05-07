@@ -2,3 +2,4 @@ __pycache__
 bookstore_pb2.py
 bookstore_pb2_grpc.py
 rc.txt
+config.ini
