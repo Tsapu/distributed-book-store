@@ -7,7 +7,7 @@ import configparser
 from ipaddress import ip_address
 # import random
 from pnode import Pnode
-from util import generate_valid_node_port, generate_valid_proccess_port
+from util import generate_valid_node_port
 
 class InteractiveNode:
     def __init__(self, master, node_ip):
@@ -69,7 +69,7 @@ class InteractiveNode:
         return len(self.get_all_pnodes())
     
     def get_nr_of_nodes(self):
-        return len(self.consul_client.catalog.nodes())
+        return len(self.consul_client.catalog.nodes()[1])
 
     def start_all_pnodes(self):
         for pnode in self.pnodes:
@@ -90,7 +90,10 @@ if __name__ == "__main__":
     nodeface = InteractiveNode(master_ip, node_ip)
 
     # Start the Consul agent for our node
-    consul_proc = subprocess.Popen(["consul", "agent", "--retry-join", master_ip, "--bind", "0.0.0.0", "--advertise", node_ip, "--datacenter", "bookstore-data-center", "--data-dir", "./.consul", "-node", f"Node-{nodeface.node_id}"], "--disable-host-node-id")
+    try:
+        consul_proc = subprocess.Popen(["consul", "agent", "--retry-join", str(master_ip), "--bind", "0.0.0.0", "--advertise", str(node_ip), "--datacenter", "bookstore-data-center", "--data-dir", "./.consul", "-node", f"Node-{nodeface.node_id}", "--disable-host-node-id"])
+    except:
+        print("Consul agent already running.")
 
     @atexit.register
     def stop_consul_agent():

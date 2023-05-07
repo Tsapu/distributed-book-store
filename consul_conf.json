@@ -1,4 +1,5 @@
 {
+ "node_name": "Node-1",
  "datacenter": "bookstore-data-center",
  "data_dir": "/var/consul",
  "bootstrap": true,
