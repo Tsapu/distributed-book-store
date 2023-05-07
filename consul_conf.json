@@ -4,7 +4,6 @@
  "bootstrap": true,
  "server": true,
  "ui" : true,
- "encrypt": "aPLfonbTEhvMnu1XYPBq3puInLPfic0ilO4mnqmT4I8=",
  "client_addr" : "0.0.0.0",
  "advertise_addr" : "172.20.10.4"
 }

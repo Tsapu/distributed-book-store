@@ -1,7 +1,8 @@
 import sys
 import consul
 # import multiprocessing
-# import subprocess
+import subprocess
+import atexit
 import configparser
 from ipaddress import ip_address
 # import random
@@ -83,6 +84,18 @@ if __name__ == "__main__":
     config = configparser.ConfigParser()
     config.read('config.ini')
 
+    master_ip = config.get('ipconf', 'master')
+    node_ip = config.get('ipconf', 'client')
+
+    nodeface = InteractiveNode(master_ip, node_ip)
+
+    # Start the Consul agent for our node
+    consul_proc = subprocess.Popen(["consul", "agent", "--retry-join", master_ip, "--bind", "0.0.0.0", "--advertise", node_ip, "--datacenter", "bookstore-data-center", "--data-dir", "./.consul", "-node", f"Node-{nodeface.node_id}"], "--disable-host-node-id")
+
+    @atexit.register
+    def stop_consul_agent():
+        consul_proc.terminate()
+
     # master_ip = config.get('ipconf', 'master')
     # print(master_ip)
     # node_ip = config.get('ipconf', 'client')
@@ -93,10 +106,7 @@ if __name__ == "__main__":
     #         dc="bookstore-data-center"
     #     )
         
-    nodeface = InteractiveNode(
-        master=config.get('ipconf', 'master'),
-        node_ip=config.get('ipconf', 'client')
-    )
+    
 
     while True:
         cmd = input(f"Node-{nodeface.node_id}> ")
