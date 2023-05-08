@@ -30,6 +30,7 @@ message ListBooksResponse {
 
 message GetBookRequest {
   string id = 1;
+  string title = 3;
 }
 
 message AddBookResponse {
@@ -47,4 +48,5 @@ message Book {
   string id = 1;
   string title = 2;
   float price = 4;
+  bool success = 6;
 }

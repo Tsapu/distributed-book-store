@@ -1,1 +1,3 @@
-python-consul @ git+https://github.com/cablehead/python-consul.git 
+python-consul @ git+https://github.com/cablehead/python-consul.git
+grpcio
+grpcio-tools

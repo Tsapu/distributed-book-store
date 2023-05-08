@@ -6,5 +6,5 @@
  "server": true,
  "ui" : true,
  "client_addr" : "0.0.0.0",
- "advertise_addr" : "172.20.10.4"
+ "advertise_addr" : "172.31.145.48"
 }

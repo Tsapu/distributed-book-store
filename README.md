@@ -3,66 +3,33 @@ Mini-project 2: Building a distributed online book store with underlying chain r
 
 **Authors:** Davis Krumins
 
-### Node discovery
-
-Node discovery is achieved with Consul
-
-
-## How to run
 
 ### Requirements
 1. Consul
-2. Python modules:
-- python-consul
-- grpcio
-- grpcio-tools
 
-First generate the gRPC python files:
+## How to run
+
+1. Install pip requirements:
+```
+pip install -r requirements.txt
+```
+
+2. Generate the gRPC python files:
 ```
 python3 -m grpc_tools.protoc -I . --python_out=. --grpc_python_out=. bookstore.proto
 ```
 
-## How to run
+3. Fill in the config.json file, where you need to specify your host IP address to advertise to other nodes.
 
-1. Generate consul secret:
-```
-docker run consul:latest keygen
-```
-then fill in the secret in the config.json file, where you also need to specify your host IP address.
-
-2. Start the master node:
+4. Start the master node:
 ```
 consul agent --server --config-file consul_conf.json
-python3 main.py
 ```
-3. Fill the config.ini with your ip addresses
-4. To join other nodes:
-```
-consul agent --retry-join=<master-node-ip> --bind=0.0.0.0 --advertise=<node-ip> --datacenter="bookstore-data-center" --encrypt=<your_key> --data-dir=/var/consul --disable-host-node-id
-python3 main.py
-```
+5. On other machines (nodes) that are in the same LAN:
 
-```
-consul agent \
- --retry-join=172.20.10.4 \
- --bind=0.0.0.0 \
- --advertise=192.168.56.10 \
- --datacenter="bookstore-data-center" \
- --encrypt=<your_key> \
- --data-dir=/var/consul \
- --disable-host-node-id
+- Fill the config.ini with the appropriate IP addreses
+- Generate gRPC python files
+- Start the cluster node: `python3 main.py`
 
-python3 main.py
-```
 
-```
-consul agent --dev --client=0.0.0.0
-
-# consul agent --dev --bind=0.0.0.0 --advertise=172.20.10.4
-```
-
-Join the cluster on the other nodes:
-1. Change the host (...)
-2.  ```
-	python main.py
-	```
+!["trarctor"](doc/Sample.png)

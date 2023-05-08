@@ -7,9 +7,12 @@ import consul
 import subprocess
 import atexit
 import configparser
-from ipaddress import ip_address
 from pnode import Pnode
 from util import generate_valid_node_port
+
+import grpc
+import bookstore_pb2
+import bookstore_pb2_grpc
 
 class InteractiveNode:
     def __init__(self, master, node_ip):
@@ -17,11 +20,12 @@ class InteractiveNode:
         self.ip = node_ip
 
         self.pnodes = []
+        self.head = None
+        self.tail = None
         self.dc = "bookstore-data-center"
         self.pname = "bookstore-node"
 
         self.consul_client = consul.Consul(
-            #host=ip_address(master),
             host=self.master,
             dc=self.dc,
         )
@@ -52,7 +56,51 @@ class InteractiveNode:
 
         elif cmd == "ls-chain":
             self.list_chain()
-    
+
+        elif cmd == "head":
+            head = self.get_head()
+            print(head)
+
+        elif cmd == "write-book":
+            name = input("Enter book name: ")
+            price = input("Enter book price: ")
+            self.write_book_item(name, price)
+        
+        elif cmd == "ls-books":
+            self.list_books()
+
+        elif cmd == "read-book":
+            name = input("Enter book name: ")
+            self.read_book_item(name)
+        
+        elif cmd == "rm-head":
+            self.remove_head()
+
+    def write_book_item(self, name, price):
+        head = self.get_head()
+        with grpc.insecure_channel(f"{head['host']}:{head['port']}") as channel:
+            stub = bookstore_pb2_grpc.BookstoreStub(channel)
+            successor = head['meta']['SuccessorID']
+            res = stub.AddBook(bookstore_pb2.Book(title=name, price=float(price)), metadata=[('successor', successor),])
+            if res: print(f"Added book: {name} = {price}")
+
+    def read_book_item(self, name):
+        head = self.get_head()
+        with grpc.insecure_channel(f"{head['host']}:{head['port']}") as channel:
+            stub = bookstore_pb2_grpc.BookstoreStub(channel)
+            res = stub.GetBook(bookstore_pb2.GetBookRequest(title=name))
+            if res.success:
+                print(f"{res.title} = {res.price}")
+            else:
+                print("Book not found")
+    def list_books(self):
+        head = self.get_head()
+        with grpc.insecure_channel(f"{head['host']}:{head['port']}") as channel:
+            stub = bookstore_pb2_grpc.BookstoreStub(channel)
+            res = stub.ListBooks(bookstore_pb2.ListBooksRequest())
+            for i, book in enumerate(res.books):
+                print(f"{i+1}. {book.title} = {book.price}")
+
     def create_processes(self, nr_of_processes):
 
         for i in range(nr_of_processes):
@@ -143,16 +191,20 @@ class InteractiveNode:
         chain_data = json.dumps(chain)
         # kv.put(chain_key, chain_data)
 
-    def list_chain(self):
+    def get_head(self):
         pnodes = self.get_all_pnodes()
-        chain = []
-
         head = list(filter(lambda pnode: "head" in pnode['tags'], pnodes))
         if len(head) == 0:
             print("No head found")
-            return
-        else: head = head[0]
-        print(head)
+            return None
+        else:
+            return head[0]
+
+    def list_chain(self):
+        chain = []
+        pnodes = self.get_all_pnodes()
+        head = self.get_head()
+
         chain.append(f"{head['id']}(head)")
         while len(chain) < len(pnodes):
             for pnode in pnodes:
@@ -166,10 +218,27 @@ class InteractiveNode:
         print(" -> ".join(chain))
         print("---")
 
-        # for pnode in pnodes:
-        #     if "head" in pnode['tags']:
-        #         next = pnode['meta']['SuccessorID']
-        #         break
+    def remove_head(self):
+        head = self.get_head()
+        pnodes = self.get_all_pnodes()
+        # Get the successor of the head
+        for pnode in pnodes:
+            if pnode['meta']['PredecessorID'] == head['id']:
+                successor = pnode
+        # Remove the head
+        self.consul_client.agent.service.deregister(head['id'])
+        # Update the successor's metadata
+        successor['meta']['PredecessorID'] = None
+        self.consul_client.agent.service.register(name=self.pname, service_id=successor['id'], address=successor['host'], port=successor['port'], tags=['head'], meta = successor['meta'])
+        print("Head removed")
+        return
+
+    # def propogate_change(self):
+    #     # After one minute, the head node will write its state to its successor:
+    #     # First, get the successor of the head
+    #     successor = self.get_head()['meta']['SuccessorID']
+    #     # Then, get the head's state
+
 
     def start_all_pnodes(self):
         for pnode in self.pnodes:
@@ -197,19 +266,8 @@ if __name__ == "__main__":
     def stop_consul_agent():
         consul_proc.terminate()
 
-    nodeface.node_id = 1
-    # 
-
-    # master_ip = config.get('ipconf', 'master')
-    # print(master_ip)
-    # node_ip = config.get('ipconf', 'client')
-    # print(node_ip)
-
-    # consul_client = consul.Consul(
-    #         host=master_ip,
-    #         dc="bookstore-data-center"
-    #     )
-        
+    # nodeface.node_id = 1
+    
     while True:
         cmd = input(f"Node-{nodeface.node_id}> ")
         if cmd == "quit" or cmd == "q":
