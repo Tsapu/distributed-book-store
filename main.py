@@ -1,38 +1,32 @@
 import sys
+import random
+import time
+import json
 import consul
 # import multiprocessing
 import subprocess
 import atexit
 import configparser
 from ipaddress import ip_address
-# import random
 from pnode import Pnode
 from util import generate_valid_node_port
 
 class InteractiveNode:
     def __init__(self, master, node_ip):
-        # if ip_address(master) == "127.0.0.1":
-        #     print("SAME")
-        # else: print(False)
-        # print(master)
-        # print("127.0.0.1")
+        self.master = master
+        self.ip = node_ip
+
         self.pnodes = []
+        self.dc = "bookstore-data-center"
+        self.pname = "bookstore-node"
+
         self.consul_client = consul.Consul(
             #host=ip_address(master),
-            host=master,
-            dc="bookstore-data-center",
+            host=self.master,
+            dc=self.dc,
         )
-        self.node_id = self.get_nr_of_nodes()
-        self.ip = node_ip
-        # node_port = generate_valid_node_port()
-        # self.node = Pnode(
-        #     node_id=self.node_id,
-        #     # service_name="bookstore-node",
-        #     # service_port=node_port,
-        #     host=self.ip
-        #     cl=self.consul_client
-        # )
-        # self.node.start()
+        self.node_id = self.get_nr_of_nodes() + 1
+        self.kv = self.consul_client.kv
 
     def parse_cmd(self, cmd):
         if cmd.startswith("init"): #and len(cmd.split()) == 2:
@@ -46,7 +40,15 @@ class InteractiveNode:
             self.start_all_pnodes()
             
         elif cmd == "ps":
-            print(self.get_all_pnodes())
+            pnodes = self.get_all_pnodes()
+            for pnode in pnodes: print(pnode)
+
+        elif cmd == "ls":
+            nodes = self.get_all_nodes()
+            for node in nodes: print(node)
+        
+        elif cmd == "chain":
+            self.create_replication_chain()
     
     def create_processes(self, nr_of_processes):
 
@@ -61,15 +63,80 @@ class InteractiveNode:
 
     def get_all_pnodes(self):
         services = self.consul_client.agent.services()
-        bookstore_services = [service for service in services.values() if service['Service'].startswith('bookstore-node')]
+        bookstore_services = [service for service in services.values() if service['Service'].startswith(self.pname)]
+        print(bookstore_services)
         nodes = [{'id': service['ID'], 'host': service['Address'], 'port': service['Port']} for service in bookstore_services]
         return nodes
     
     def get_nr_of_pnodes(self):
         return len(self.get_all_pnodes())
+
+    def get_all_nodes(self):
+        nodes = self.consul_client.catalog.nodes()[1]
+        node_list = []
+        for node in nodes:
+            node_list.append({'node': node['Node'], 'dc': node['Datacenter'], 'host': node['Address']})
+        return node_list
     
     def get_nr_of_nodes(self):
-        return len(self.consul_client.catalog.nodes()[1])
+        return len(self.get_all_nodes())
+
+    def create_replication_chain(self):
+        chain_key = "replication-chain"
+        # Check if chain already exists
+        # kv = self.consul_client.kv
+        chain_exists = self.kv.get(chain_key)[1] is not None
+        if chain_exists:
+            return "Chain already exists"
+        
+        # Get ALL active nodes for the given service in the datacenter
+        service_pnodes = self.consul_client.catalog.service(self.pname, dc=self.dc)[1]
+
+        if not service_pnodes:
+            print("No active pnodes found for service: ", service_name)
+            return
+
+        # Shuffle the list of nodes to randomize the selection
+        random.shuffle(service_pnodes)
+
+        # Select a random head and tail for the chain
+        head = tail = random.choice(service_pnodes)
+
+        # Create the chain by selecting a random successor for each node
+        chain = []
+        visited = set()
+        while True:
+            chain.append(tail)
+            visited.add(tail['ServiceID'])
+            successors = [pnode for pnode in service_pnodes if pnode['ServiceID'] != tail['ServiceID'] and pnode['ServiceID'] not in visited]
+            if not successors:
+                break
+            tail = random.choice(successors)
+        
+        meta_data = {}
+        for i, pnode in enumerate(chain):
+            print(pnode)
+            if i == 0:
+                meta_data['PredecessorID'] = None
+            else:
+                meta_data['PredecessorID'] = chain[i-1]['ServiceID']
+
+            if i == len(chain)-1:
+                meta_data['SuccessorID'] = None
+            else:
+                meta_data['SuccessorID'] = chain[i+1]['ServiceID']
+
+            # Register the pnode with its updated metadata
+            service_id = pnode['ServiceID']
+            service_address = pnode['Address']
+            service_port = pnode['ServicePort']
+            service_tags = pnode['ServiceTags']
+            check = consul.Check.tcp(service_address, service_port, interval="10s", timeout="1s")
+            self.consul_client.agent.service.register(name=self.pname, service_id=service_id, address=service_address, port=service_port, tags=service_tags, check=check, meta = meta_data)
+
+        # Store the chain in the KV store
+        chain_data = json.dumps(chain)
+        # kv.put(chain_key, chain_data)
 
     def start_all_pnodes(self):
         for pnode in self.pnodes:
@@ -102,8 +169,7 @@ if __name__ == "__main__":
     except:
         # this means the master is running on this node
         print("Consul agent is already running")
-        nodeface.node_id = "1"
-
+        nodeface.node_id = 1
 
     # master_ip = config.get('ipconf', 'master')
     # print(master_ip)

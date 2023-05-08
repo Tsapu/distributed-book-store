@@ -64,7 +64,7 @@ class Pnode:
         add_HealthServicer_to_server(HealthServicer(), server)
         server.add_insecure_port(f'[::]:{self.port}')
         server.start()
-        print(f"Node-{self.id} listening on port {self.port}...")
+        print(f"{self.id} listening on port {self.port}...")
         self.server = server # ref for stop
         self.server.wait_for_termination()
 

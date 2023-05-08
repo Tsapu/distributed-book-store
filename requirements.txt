@@ -1,0 +1,1 @@
+python-consul @ git+https://github.com/cablehead/python-consul.git 
