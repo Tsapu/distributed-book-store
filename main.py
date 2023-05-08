@@ -49,6 +49,9 @@ class InteractiveNode:
         
         elif cmd == "chain":
             self.create_replication_chain()
+
+        elif cmd == "ls-chain":
+            self.list_chain()
     
     def create_processes(self, nr_of_processes):
 
@@ -139,6 +142,34 @@ class InteractiveNode:
         # Store the chain in the KV store
         chain_data = json.dumps(chain)
         # kv.put(chain_key, chain_data)
+
+    def list_chain(self):
+        pnodes = self.get_all_pnodes()
+        chain = []
+
+        head = list(filter(lambda pnode: "head" in pnode['tags'], pnodes))
+        if len(head) == 0:
+            print("No head found")
+            return
+        else: head = head[0]
+        print(head)
+        chain.append(f"{head['id']}(head)")
+        while len(chain) < len(pnodes):
+            for pnode in pnodes:
+                if pnode['meta']['PredecessorID'] == head['id']:
+                    chain.append(pnode['id'])
+                    head = pnode
+                    break
+        chain[-1] = chain[-1] + "(tail)"
+        print("\nChain:")
+        print("---")
+        print(" -> ".join(chain))
+        print("---")
+
+        # for pnode in pnodes:
+        #     if "head" in pnode['tags']:
+        #         next = pnode['meta']['SuccessorID']
+        #         break
 
     def start_all_pnodes(self):
         for pnode in self.pnodes:
