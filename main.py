@@ -64,8 +64,8 @@ class InteractiveNode:
     def get_all_pnodes(self):
         services = self.consul_client.agent.services()
         bookstore_services = [service for service in services.values() if service['Service'].startswith(self.pname)]
-        print(bookstore_services)
-        nodes = [{'id': service['ID'], 'host': service['Address'], 'port': service['Port']} for service in bookstore_services]
+        # print(bookstore_services)
+        nodes = [{'id': service['ID'], 'host': service['Address'], 'port': service['Port'], 'meta': service['Meta'], 'tags': service['Tags']} for service in bookstore_services]
         return nodes
     
     def get_nr_of_pnodes(self):
@@ -93,7 +93,7 @@ class InteractiveNode:
         service_pnodes = self.consul_client.catalog.service(self.pname, dc=self.dc)[1]
 
         if not service_pnodes:
-            print("No active pnodes found for service: ", service_name)
+            print("No active pnodes found for service: ", self.pname)
             return
 
         # Shuffle the list of nodes to randomize the selection
@@ -115,16 +115,18 @@ class InteractiveNode:
         
         meta_data = {}
         for i, pnode in enumerate(chain):
-            print(pnode)
+            pnode['ServiceTags'] = ['replica']
             if i == 0:
                 meta_data['PredecessorID'] = None
+                pnode['ServiceTags'] = ['head']
             else:
                 meta_data['PredecessorID'] = chain[i-1]['ServiceID']
-
+                
             if i == len(chain)-1:
                 meta_data['SuccessorID'] = None
+                pnode['ServiceTags'] = ['tail']
             else:
-                meta_data['SuccessorID'] = chain[i+1]['ServiceID']
+                meta_data['SuccessorID'] = chain[i+1]['ServiceID']      
 
             # Register the pnode with its updated metadata
             service_id = pnode['ServiceID']
@@ -164,7 +166,7 @@ if __name__ == "__main__":
     def stop_consul_agent():
         consul_proc.terminate()
 
-    # nodeface.node_id = 1
+    nodeface.node_id = 1
     # 
 
     # master_ip = config.get('ipconf', 'master')
