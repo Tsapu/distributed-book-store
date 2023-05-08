@@ -157,19 +157,15 @@ if __name__ == "__main__":
     nodeface = InteractiveNode(master_ip, node_ip)
 
     # Start the Consul agent for our node
-    try:
-        consul_proc = subprocess.Popen(["consul", "agent", "--retry-join", str(master_ip), "--bind", "0.0.0.0", "--advertise", str(node_ip), "--datacenter", "bookstore-data-center", "--data-dir", "./.consul", "-node", f"Node-{nodeface.node_id}", "--disable-host-node-id"], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    # try:
+    consul_proc = subprocess.Popen(["consul", "agent", "--retry-join", str(master_ip), "--bind", "0.0.0.0", "--advertise", str(node_ip), "--datacenter", "bookstore-data-center", "--data-dir", "./.consul", "-node", f"Node-{nodeface.node_id}", "--disable-host-node-id"], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
-        _, stderr = process.communicate()
-        # print(stderr.decode())
+    @atexit.register
+    def stop_consul_agent():
+        consul_proc.terminate()
 
-        @atexit.register
-        def stop_consul_agent():
-            consul_proc.terminate()
-    except:
-        # this means the master is running on this node
-        print("Consul agent is already running")
-        nodeface.node_id = 1
+    # nodeface.node_id = 1
+    # 
 
     # master_ip = config.get('ipconf', 'master')
     # print(master_ip)
